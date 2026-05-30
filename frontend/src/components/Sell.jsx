@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { FiHome, FiDollarSign, FiUser, FiChevronLeft, FiChevronRight, FiCheckCircle, FiUploadCloud, FiX, FiLoader } from "react-icons/fi";
-import { supabase } from "../lib/supabaseClient";
+import api from "../services/api";
 
 const AMENITIES_LIST = [
   "Swimming Pool", "Gym", "Parking", "Garden", "24/7 Security", "Balcony", "Fully Furnished", "Pet Friendly"
@@ -33,11 +33,9 @@ const Sell = ({ onAddProperty }) => {
   useEffect(() => {
     const fetchPropertyTypes = async () => {
       try {
-        const { data, error } = await supabase
-          .from('property_types')
-          .select('type_name');
+        const { data } = await api.get('/properties/types');
 
-        if (error) throw error;
+        if (!data) throw new Error("Failed to fetch property types");
 
         const formattedTypes = data.map(type => ({
           label: type.type_name,
@@ -129,82 +127,33 @@ const handleSubmit = async (e) => {
     setIsSubmitting(true);
 
     try {
-        // --- Step 1 & 2: Get ownerId and propertyTypeId (Same as before) ---
-        let ownerId;
-        const { data: profileData } = await supabase.from('profiles').select('id').eq('email', formData.ownerEmail).single();
-
-        if (profileData) {
-            ownerId = profileData.id;
-        } else {
-            const { data: newProfileData, error: newProfileError } = await supabase
-                .from('profiles').insert({ full_name: formData.ownerName, email: formData.ownerEmail, phone_number: formData.ownerPhone }).select('id').single();
-            if (newProfileError) throw newProfileError;
-            ownerId = newProfileData.id;
-        }
-
-        const { data: typeData, error: typeError } = await supabase.from('property_types').select('id').eq('type_name', formData.propertyType).single();
-        if (typeError || !typeData) throw new Error(`Could not find property type: ${formData.propertyType}.`);
-        const propertyTypeId = typeData.id;
-
-        // --- Step 3: Insert the Property and GET THE NEW ID ---
-        const title = `${formData.propertyType} in ${formData.location}`;
+        const submitData = new FormData();
+        submitData.append('title', `${formData.propertyType} in ${formData.location}`);
+        submitData.append('description', formData.description);
+        submitData.append('propertyType', formData.propertyType);
+        submitData.append('price', formData.price);
+        submitData.append('area', formData.area);
+        submitData.append('location', formData.location);
         
-        // **MODIFIED**: We use .select() to get the new property's ID back
-        const { data: newProperty, error: propertyInsertError } = await supabase
-            .from('properties')
-            .insert({
-                title: title,
-                property_description: formData.description,
-                property_type_id: propertyTypeId,
-                price: formData.price,
-                area_sqft: formData.area,
-                location: formData.location,
-                owner_id: ownerId,
-            })
-            .select('property_id')
-            .single(); // Use .single() because we're inserting one row
+        const locationParts = formData.location.split(',');
+        submitData.append('city', locationParts[0]?.trim() || '');
+        submitData.append('state', locationParts[1]?.trim() || '');
+        
+        submitData.append('ownerName', formData.ownerName);
+        submitData.append('ownerEmail', formData.ownerEmail);
+        submitData.append('ownerPhone', formData.ownerPhone);
 
-        if (propertyInsertError) throw propertyInsertError;
-        const newPropertyId = newProperty.property_id;
-
-        // --- Step 4: Upload Images to Storage & Save URLs ---
-        if (formData.images.length > 0) {
-            // Create an array of promises for all image uploads
-            const uploadPromises = formData.images.map(imageFile => {
-                const fileName = `${newPropertyId}/${Date.now()}-${imageFile.file.name}`;
-                return supabase.storage
-                    .from('property-images') // Your bucket name
-                    .upload(fileName, imageFile.file);
+        if (formData.images && formData.images.length > 0) {
+            formData.images.forEach((img) => {
+                submitData.append('images', img.file);
             });
-
-            // Wait for all uploads to complete
-            const uploadResults = await Promise.all(uploadPromises);
-
-            // Check for any upload errors
-            const uploadErrors = uploadResults.filter(result => result.error);
-            if (uploadErrors.length > 0) {
-                throw new Error('Failed to upload one or more images.');
-            }
-
-            // Get the public URLs for all uploaded files
-            const imageUrls = uploadResults.map(result => {
-                const { data } = supabase.storage.from('property-images').getPublicUrl(result.data.path);
-                return data.publicUrl;
-            });
-
-            // Create the rows to insert into property_images
-            const imageRows = imageUrls.map(url => ({
-                property_id: newPropertyId,
-                image_url: url,
-            }));
-
-            // Insert all image URLs into the property_images table
-            const { error: imageInsertError } = await supabase
-                .from('property_images')
-                .insert(imageRows);
-
-            if (imageInsertError) throw imageInsertError;
         }
+
+        const res = await api.post('/properties', submitData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
 
         // If everything succeeded
         setIsSubmitted(true);

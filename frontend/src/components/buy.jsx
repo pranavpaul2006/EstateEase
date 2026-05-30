@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 // ... (other imports remain the same)
 import PropertyGrid from "./property_grid";
-import { supabase } from "../lib/supabaseClient";
+import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
 export default function Buy() {
@@ -29,25 +29,25 @@ export default function Buy() {
   useEffect(() => {
     /* ... fetchDropdownData logic ... */
     const fetchDropdownData = async () => {
-      const { data: locationsData } = await supabase
-        .from("properties")
-        .select("location");
-      if (locationsData) {
-        const uniqueCities = [
-          ...new Set(
-            locationsData
-              .map((p) => p.location.split(",")[0].trim())
-              .filter(Boolean)
-          ),
-        ];
-        setDropdownData((prev) => ({ ...prev, cities: uniqueCities }));
-      }
-      const { data: typesData } = await supabase
-        .from("property_types")
-        .select("type_name");
-      if (typesData) {
-        const types = typesData.map((t) => t.type_name);
-        setDropdownData((prev) => ({ ...prev, propertyTypes: types }));
+      try {
+        const { data: locationsData } = await api.get("/properties/locations");
+        if (locationsData) {
+          const uniqueCities = [
+            ...new Set(
+              locationsData
+                .map((p) => p.city)
+                .filter(Boolean)
+            ),
+          ];
+          setDropdownData((prev) => ({ ...prev, cities: uniqueCities }));
+        }
+        const { data: typesData } = await api.get("/properties/types");
+        if (typesData) {
+          const types = typesData.map((t) => t.type_name);
+          setDropdownData((prev) => ({ ...prev, propertyTypes: types }));
+        }
+      } catch (err) {
+        console.error("Error fetching dropdown data", err);
       }
     };
     fetchDropdownData();
@@ -56,19 +56,22 @@ export default function Buy() {
     /* ... fetchProperties logic ... */
     const fetchProperties = async () => {
       setLoading(true);
-      const { data, error } = await supabase.rpc("filter_properties", {
-        city_query: appliedFilters.city,
-        type_query: appliedFilters.type,
-        min_price_query: appliedFilters.min,
-        max_price_query: appliedFilters.max,
-      });
-      if (error) {
+      try {
+        const { data } = await api.get("/properties/search", {
+          params: {
+            location: appliedFilters.city,
+            type: appliedFilters.type,
+            min: appliedFilters.min,
+            max: appliedFilters.max,
+          }
+        });
+        setProperties(data || []);
+      } catch (error) {
         console.error("Error fetching properties:", error);
         setProperties([]);
-      } else {
-        setProperties(data || []);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchProperties();
   }, [appliedFilters]);
@@ -79,12 +82,13 @@ export default function Buy() {
       return;
     }
     const fetchWishlist = async () => {
-      const { data } = await supabase
-        .from("wishlists")
-        .select("property_id")
-        .eq("user_id", user.id);
-      if (data) {
-        setWishlist(new Set(data.map((item) => item.property_id)));
+      try {
+        const { data } = await api.get(`/wishlists/${user.id}`);
+        if (data) {
+          setWishlist(new Set(data.map((item) => item.property_id)));
+        }
+      } catch (err) {
+        console.error("Error fetching wishlist", err);
       }
     };
     fetchWishlist();
@@ -121,12 +125,9 @@ export default function Buy() {
     try {
       if (isWishlisted) {
         // 2. If it is wishlisted, REMOVE it from the database
-        const { error } = await supabase
-          .from("wishlists")
-          .delete()
-          .match({ user_id: user.id, property_id: propertyId });
-
-        if (error) throw error;
+        await api.delete("/wishlists", {
+          data: { user_id: user.id, property_id: propertyId }
+        });
 
         // 3. Update the local state for immediate UI feedback
         setWishlist((prev) => {
@@ -136,11 +137,10 @@ export default function Buy() {
         });
       } else {
         // 4. If it's not wishlisted, ADD it to the database
-        const { error } = await supabase
-          .from("wishlists")
-          .insert({ user_id: user.id, property_id: propertyId });
-
-        if (error) throw error;
+        await api.post("/wishlists", {
+          user_id: user.id,
+          property_id: propertyId
+        });
 
         // 5. Update the local state for immediate UI feedback
         setWishlist((prev) => new Set(prev).add(propertyId));

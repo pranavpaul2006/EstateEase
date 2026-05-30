@@ -20,81 +20,10 @@ function App() {
 
   // --- State Management ---
   const [showLogin, setShowLogin] = useState(false);
-  const [properties, setProperties] = useState([]);
-  const [wishlist, setWishlist] = useState([]);
-  const [bookings, setBookings] = useState([]); // Owned by App.js
-  const [listedProperties, setListedProperties] = useState([]);
 
   const isLoggedIn = !!user;
 
-  // --- Data Fetching ---
-  useEffect(() => {
-    // Fetch static properties
-    fetch("/data/properties.json")
-      .then((res) => res.json())
-      .then((data) => setProperties(data.properties));
-  }, []);
 
-  // Fetch listed properties from local storage (or clear on logout)
-  useEffect(() => {
-    if (user) {
-      const listingStorageKey = `estateListings_${user.id}`;
-      const storedListings = JSON.parse(
-        localStorage.getItem(listingStorageKey) || "[]"
-      );
-      setListedProperties(storedListings);
-    } else {
-      setListedProperties([]); // Clear on logout
-    }
-  }, [user]);
-
-  // THIS EFFECT NOW FETCHES BOOKINGS AND CLEARS THEM ON LOGOUT
-  useEffect(() => {
-    const fetchAppointments = async () => {
-      if (!user) {
-        setBookings([]); // Clear bookings on logout
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from("appointments")
-          .select(`*`) // Select only from appointments
-          .eq("user_id", user.id)
-          .order("meeting_time", { ascending: false });
-
-        if (error) throw error;
-
-        // Convert appointments to booking history format
-        // NOTE: You will need to JOIN with your 'properties' table
-        // to get real location, type, and img data.
-        const bookingHistory = (data || []).map((appointment) => ({
-          id: appointment.id,
-          location:
-            "Test Location (ID: " +
-            appointment.property_id.slice(0, 8) +
-            "...",
-          type: "Test Appointment",
-          img: "https://via.placeholder.com/150",
-          bookingDate: new Date(appointment.meeting_time).toLocaleDateString(
-            "en-US",
-            {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            }
-          ),
-        }));
-
-        setBookings(bookingHistory); // Set the state here in App.js
-      } catch (err) {
-        console.error("Error fetching appointments:", err);
-      }
-    };
-
-    fetchAppointments(); // Run the fetch
-  }, [user]); // Dependency is 'user'. Re-runs on login/logout.
 
   // --- Handlers ---
   const handleLoginClick = () => setShowLogin(true);
@@ -103,60 +32,7 @@ function App() {
     setShowLogin(false);
   };
 
-  const handleToggleWishlist = (propertyId) => {
-    setWishlist((prevWishlist) => {
-      if (prevWishlist.includes(propertyId)) {
-        return prevWishlist.filter((id) => id !== propertyId);
-      } else {
-        return [...prevWishlist, propertyId];
-      }
-    });
-  };
 
-  // This function is now in the same component that fetches the data,
-  // so it will work perfectly.
-  const handleDeleteBooking = async (appointmentId) => {
-    if (!user) return;
-
-    // 1. Delete from Supabase
-    const { error } = await supabase
-      .from("appointments")
-      .delete()
-      .eq("id", appointmentId)
-      .eq("user_id", user.id);
-
-    if (error) {
-      console.error("Error deleting appointment:", error);
-    } else {
-      // 2. Update local state to refresh the UI
-      console.log("Deleted. Updating UI...");
-      setBookings((prevBookings) =>
-        prevBookings.filter((b) => b.id !== appointmentId)
-      );
-    }
-  };
-
-  // --- Listed Properties Handlers ---
-  const refreshListedProperties = () => {
-    if (user) {
-      const storageKey = `estateListings_${user.id}`;
-      setListedProperties(
-        JSON.parse(localStorage.getItem(storageKey) || "[]")
-      );
-    }
-  };
-
-  const handleAddProperty = (formData) => {
-    if (!user) return;
-    const storageKey = `estateListings_${user.id}`;
-    const existing = JSON.parse(localStorage.getItem(storageKey) || "[]");
-    const newProperty = {
-      id: Date.now(),
-      ...formData,
-    };
-    localStorage.setItem(storageKey, JSON.stringify([...existing, newProperty]));
-    refreshListedProperties();
-  };
 
   // Show loading while auth is initializing
   if (loading) {
@@ -176,45 +52,33 @@ function App() {
           <Route
             path="/"
             element={
-              <Home
-                properties={properties}
-                wishlist={wishlist}
-                onToggleWishlist={handleToggleWishlist}
-              />
+              <Home />
             }
           />
           <Route path="/contact" element={<Contact />} />
           <Route
             path="/buy"
             element={
-              <Buy
-                wishlist={wishlist}
-                onToggleWishlist={handleToggleWishlist}
-              />
+              <Buy />
             }
           />
           <Route
             path="/sell"
             element={
-              <Sell onAddProperty={handleAddProperty} currentUser={user} />
+              <Sell currentUser={user} />
             }
           />
           <Route path="/about" element={<AboutUs />} />
           <Route
             path="/cart"
             element={
-              <Cart
-                wishlistItems={properties.filter((p) =>
-                  wishlist.includes(p.id)
-                )}
-                onToggleWishlist={handleToggleWishlist}
-              />
+              <Cart />
             }
           />
           <Route
             path="/property/:id"
             element={
-              <Property properties={properties} currentUser={user} />
+              <Property currentUser={user} />
             }
           />
 
@@ -223,15 +87,7 @@ function App() {
             path="/profile"
             element={
               <ProtectedRoute isLoggedIn={isLoggedIn}>
-                {/* UPDATED PROPS FOR UserProfile */}
-                <UserProfile
-                  bookings={bookings} // Pass the state DOWN
-                  // setBookings is NO LONGER needed
-                  onDeleteBooking={handleDeleteBooking} // Pass the handler DOWN
-                  listedProperties={listedProperties}
-                  // onLogout prop is missing, UserProfile.jsx expects it.
-                  // You should pass the `signOut` function from useAuth
-                />
+                <UserProfile />
               </ProtectedRoute>
             }
           />

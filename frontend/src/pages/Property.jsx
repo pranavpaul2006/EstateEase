@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { supabase } from "../lib/supabaseClient";
+import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import ConfirmModal from "./ConfirmModal";
 import Notification from "../components/Notification";
@@ -42,30 +42,17 @@ const Property = () => {
       setError("");
 
       try {
-        // ✅ FIX: Explicitly tell Supabase to join profiles using the owner_id column.
-        const { data, error } = await supabase
-          .from("properties")
-          .select(
-            `
-                    *,
-                    property_types ( type_name ),
-                    property_images ( image_url, is_primary ),
-                    profiles:owner_id ( full_name ) 
-                `
-          )
-          .eq("property_id", id);
+        // ✅ FIX: Call backend API to fetch property details
+        const response = await api.get(`/properties/${id}`);
+        const data = response.data;
 
-        if (error) {
-          throw error;
-        }
-
-        if (!data || data.length === 0) {
+        if (!data) {
           throw new Error(
             "Could not find property details. It may not exist or you may not have permission to view it."
           );
         }
 
-        setProperty(data[0]);
+        setProperty(data);
       } catch (err) {
         setError(err.message);
         console.error(err);
@@ -84,15 +71,15 @@ const Property = () => {
     // Combine selected date with a default time (e.g., 10:00 AM) to create a valid timestamp
     const meetingTime = `${selectedDate}T10:00:00`;
 
-    const { error } = await supabase.from("appointments").insert({
-      property_id: property.property_id,
-      user_id: user.id,
-      owner_id: property.owner_id,
-      meeting_time: meetingTime,
-      status: "pending", // Default status
-    });
-
-    if (error) {
+    try {
+      await api.post("/appointments", {
+        property_id: property.property_id || property.id, // handle both cases
+        user_id: user.id,
+        owner_id: property.owner_id,
+        meeting_time: meetingTime,
+        status: "pending",
+      });
+    } catch (error) {
       console.error("Error booking appointment:", error);
       setBookingStatus("error");
       setNotification({
@@ -100,13 +87,16 @@ const Property = () => {
         message: "Failed to book appointment. Please try again.",
         type: "error",
       });
-    } else {
-      setBookingStatus("booked");
-      setNotification({
-        show: true,
-        message: "Appointment requested successfully!",
-        type: "success",
-      });
+    } finally {
+      // If success
+      if (bookingStatus !== 'error') {
+        setBookingStatus("booked");
+        setNotification({
+          show: true,
+          message: "Appointment requested successfully!",
+          type: "success",
+        });
+      }
     }
   };
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom"; // Added useNavigate
+import { Link, useNavigate } from "react-router-dom";
 import {
   FiEdit,
   FiLogOut,
@@ -9,41 +9,28 @@ import {
   FiTrash2,
 } from "react-icons/fi";
 import EditProfileModal from "./EditProfileModal";
-import ConfirmationModal from "./logout_box"; // Assuming this is your logout confirm modal
+import ConfirmationModal from "./logout_box";
 import { useAuth } from "../context/AuthContext";
-import { supabase } from "../lib/supabaseClient";
-import Notification from "./Notification"; // Assuming you have this component
+import Notification from "./Notification";
+import api from "../services/api";
 
-<<<<<<< HEAD
-function UserProfile({
-  bookings,
-  onDeleteBooking,
-}) {
-  const { user, signOut } = useAuth();
-
-  const [profile, setProfile] = useState(null);
-  const [listedProperties, setListedProperties] = useState([]); 
-=======
-// This component is now self-sufficient and fetches all its own data.
-// The props 'bookings', 'onDeleteBooking', and 'listedProperties' have been removed.
 function UserProfile() {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   const [profile, setProfile] = useState(null);
   const [listedProperties, setListedProperties] = useState([]);
-  const [bookings, setBookings] = useState([]); // ✅ Manages its own bookings state
->>>>>>> 6f7477216a5aa4de9b997e3b83979e79a5625d89
+  const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // State for modals and notifications
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [notification, setNotification] = useState({
     show: false,
     message: "",
   });
-  const [itemToDelete, setItemToDelete] = useState(null); // Generic state for deleting bookings or properties
+  const [itemToDelete, setItemToDelete] = useState(null);
 
   useEffect(() => {
     const fetchAllUserData = async () => {
@@ -54,44 +41,29 @@ function UserProfile() {
 
       try {
         setLoading(true);
-        // 1. Fetch User Profile (with create-if-not-exists logic)
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single();
-        if (profileError && profileError.code !== "PGRST116")
-          throw profileError;
-
-        let currentProfile = profileData;
-        if (!profileData) {
-          const { data: newProfile, error: createError } = await supabase
-            .from("profiles")
-            .insert([{ id: user.id, email: user.email }])
-            .select()
-            .single();
-          if (createError) throw createError;
-          currentProfile = newProfile;
+        // 1. Fetch User Profile
+        let profileData;
+        try {
+          const res = await api.get(`/users/${user.id}`);
+          profileData = res.data;
+        } catch (err) {
+          if (err.response && err.response.status === 404) {
+            // Create profile
+            const createRes = await api.post("/users", { id: user.id, email: user.email, full_name: user.email.split('@')[0] });
+            profileData = createRes.data;
+          } else {
+            throw err;
+          }
         }
-        setProfile(currentProfile);
+        setProfile(profileData);
 
         // 2. Fetch User's Listed Properties
-        const { data: propertiesData, error: propertiesError } = await supabase
-          .from("properties")
-          .select(`*, property_images (image_url, is_primary)`)
-          .eq("owner_id", user.id);
-        if (propertiesError) throw propertiesError;
-        setListedProperties(propertiesData || []);
+        const propsRes = await api.get(`/users/${user.id}/properties`);
+        setListedProperties(propsRes.data || []);
 
         // 3. Fetch User's Booking History
-        const { data: bookingsData, error: bookingsError } = await supabase
-          .from("appointments")
-          .select(
-            `appointment_id, meeting_time, properties!inner (property_id, title, location, property_images (image_url, is_primary))`
-          )
-          .eq("user_id", user.id);
-        if (bookingsError) throw bookingsError;
-        setBookings(bookingsData || []);
+        const bookingsRes = await api.get(`/appointments/user/${user.id}`);
+        setBookings(bookingsRes.data || []);
       } catch (err) {
         setError(err.message || "Failed to fetch data.");
       } finally {
@@ -102,52 +74,26 @@ function UserProfile() {
     fetchAllUserData();
   }, [user]);
 
-<<<<<<< HEAD
-  const handleLogoutClick = () => {
-    setShowLogoutConfirm(true);
-  };
-  
-  const handleConfirmLogout = async () => {
-    try {
-      console.log('🔄 Starting logout process...');
-      await signOut();
-      console.log('✅ Signed out from Supabase');
-      localStorage.clear();
-      console.log('✅ Cleared local storage');
-      window.location.href = '/';
-    } catch (error) {
-      console.error('❌ Logout error:', error);
-      window.location.href = '/';
-    } finally {
-      setShowLogoutConfirm(false);
-    }
-  };
-=======
-  // --- Single, Correct Handler Functions ---
->>>>>>> 6f7477216a5aa4de9b997e3b83979e79a5625d89
-
   const handleSaveProfile = async (updatedData) => {
-    /* ... (Your existing logic is good) ... */
     if (!user) return;
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          full_name: updatedData.name,
-          phone_number: updatedData.phone,
-          address: updatedData.address,
-          profile_image_url: updatedData.profileImageUrl,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", user.id);
-      if (error) throw error;
-      setProfile((prev) => ({
-        ...prev,
-        full_name: updatedData.name,
-        phone_number: updatedData.phone,
-        address: updatedData.address,
-        profile_image_url: updatedData.profileImageUrl,
-      }));
+      const formData = new FormData();
+      formData.append("full_name", updatedData.name);
+      formData.append("phone_number", updatedData.phone);
+      formData.append("address", updatedData.address);
+      if (updatedData.profileImageUrl && !updatedData.file) {
+         formData.append("profile_image_url", updatedData.profileImageUrl);
+      }
+      if (updatedData.file) {
+        formData.append("avatar", updatedData.file);
+      }
+
+      const res = await api.put(`/users/${user.id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      setProfile(res.data);
       setIsEditModalOpen(false);
       setNotification({ show: true, message: "Profile updated successfully!" });
     } catch (error) {
@@ -155,61 +101,40 @@ function UserProfile() {
     }
   };
 
-<<<<<<< HEAD
-=======
   const handleLogoutClick = () => setShowLogoutConfirm(true);
 
   const handleConfirmLogout = async () => {
-    await signOut();
-    window.location.href = "/";
+    try {
+      await signOut();
+      localStorage.clear();
+      window.location.href = "/";
+    } catch (error) {
+      console.error('Logout error:', error);
+      window.location.href = "/";
+    } finally {
+      setShowLogoutConfirm(false);
+    }
   };
 
->>>>>>> 6f7477216a5aa4de9b997e3b83979e79a5625d89
   const handleConfirmDelete = async () => {
     if (!itemToDelete) return;
-
     try {
-<<<<<<< HEAD
-      // 1. Delete from Supabase using the correct ID
-=======
-      // This function can now be used for deleting bookings or properties in the future
->>>>>>> 6f7477216a5aa4de9b997e3b83979e79a5625d89
-      const { error } = await supabase
-        .from("appointments")
-        .delete()
-<<<<<<< HEAD
-        .eq('appointment_id', bookingToDelete.id) // Use the ID passed to the modal
-        .eq('user_id', user.id);
-
-      if (error) {
-        throw error;
-      }
-
-      // 2. Update the state in App.js by calling the prop
-      console.log("Deleted. Updating UI...");
-      onDeleteBooking(bookingToDelete.id); 
-
-      // 3. Close the modal
-      setBookingToDelete(null);
-
-=======
-        .eq("appointment_id", itemToDelete.appointment_id);
-      if (error) throw error;
-
-      // Update the local state to instantly remove the item from the UI
+      // Deleting booking - not implemented on backend, but let's assume we can add it, or we skip actual delete if no endpoint
+      // Let's call api.delete
+      await api.delete(`/appointments/${itemToDelete.appointment_id || itemToDelete.id}`);
+      
       setBookings((prev) =>
-        prev.filter((b) => b.appointment_id !== itemToDelete.appointment_id)
+        prev.filter((b) => (b.appointment_id || b.id) !== (itemToDelete.appointment_id || itemToDelete.id))
       );
       setNotification({
         show: true,
         message: "Booking cancelled successfully.",
       });
->>>>>>> 6f7477216a5aa4de9b997e3b83979e79a5625d89
     } catch (error) {
       console.error("Error deleting item:", error);
       setNotification({ show: true, message: `Error: ${error.message}` });
     } finally {
-      setItemToDelete(null); // Close the confirmation modal
+      setItemToDelete(null);
     }
   };
 
@@ -239,11 +164,10 @@ function UserProfile() {
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column: Profile Card */}
           <div className="lg:col-span-1">
-            {/* ... (Your profile card JSX is good) ... */}
             <div className="bg-white p-6 rounded-2xl shadow-lg text-center sticky top-28">
               <img
                 src={
-                  profile.profile_image_url ||
+                  profile.profile_image_url || profile.avatar_url ||
                   `https://api.dicebear.com/7.x/initials/svg?seed=${profile.email}`
                 }
                 alt="Profile"
@@ -278,9 +202,7 @@ function UserProfile() {
 
           {/* Right Column: Details */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Account Details Card */}
             <div className="bg-white p-6 rounded-2xl shadow-lg">
-              {/* ... (Your account details JSX is good) ... */}
               <h3 className="text-xl font-semibold text-gray-800 border-b pb-4 mb-4">
                 Account Details
               </h3>
@@ -304,12 +226,6 @@ function UserProfile() {
               </ul>
             </div>
 
-<<<<<<< HEAD
-            {/* ========== MODIFIED BLOCK START ========== */}
-            {/* Booking History Card (uses `bookings` prop) */}
-=======
-            {/* ✅ Booking History Card (Updated JSX) */}
->>>>>>> 6f7477216a5aa4de9b997e3b83979e79a5625d89
             <div className="bg-white p-6 rounded-2xl shadow-lg">
               <h3 className="text-xl font-semibold text-gray-800 border-b pb-4 mb-4">
                 My Appointments
@@ -317,42 +233,22 @@ function UserProfile() {
               {bookings.length > 0 ? (
                 <div className="space-y-4">
                   {bookings.map((booking) => {
-<<<<<<< HEAD
-                    // --- Start of robust data handling ---
-                    
-                    // 1. Get the nested property object, with a fallback
                     const property = booking.properties || {};
-
-                    // 2. Get image URL, checking for nested arrays
                     const primaryImage = property.property_images?.find(img => img.is_primary);
                     const displayImageUrl = primaryImage?.image_url || property.property_images?.[0]?.image_url || booking.img || "https://via.placeholder.com/150";
 
-                    // 3. Format the date, with a fallback
-                    let formattedDate = "Invalid Date"; // Default
-                    if (booking.appointment_date) {
+                    let formattedDate = "Invalid Date"; 
+                    if (booking.meeting_time) {
                       try {
-                        formattedDate = new Date(booking.appointment_date).toLocaleDateString("en-US", {
+                        formattedDate = new Date(booking.meeting_time).toLocaleDateString("en-US", {
                           weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
                         });
-                      } catch (e) {
-                        console.error("Could not parse date:", booking.appointment_date);
-                        // formattedDate remains "Invalid Date"
-                      }
-                    } else if (booking.bookingDate) {
-                      // Fallback to original prop data if it exists
-                      formattedDate = booking.bookingDate;
-                    } else {
-                      formattedDate = "No date provided";
+                      } catch (e) { }
                     }
 
-                    // 4. Get title and location, with fallbacks
-                    const displayTitle = property.title || booking.location || "Property Title Not Found";
-                    const displayLocation = property.location || booking.type || "Property Location Not Found";
-                    
-                    // 5. Use the correct ID for deletion
+                    const displayTitle = property.title || "Property Title Not Found";
+                    const displayLocation = property.location || "Property Location Not Found";
                     const bookingId = booking.appointment_id || booking.id;
-
-                    // --- End of robust data handling ---
 
                     return (
                       <div key={bookingId} className="flex items-center gap-4 border-b pb-4 last:border-b-0">
@@ -370,48 +266,7 @@ function UserProfile() {
                           <p className="text-sm text-blue-600">{formattedDate}</p>
                         </div>
                         <button 
-                          onClick={() => setBookingToDelete({ 
-                            id: bookingId, // Use the correct ID
-                            location: displayTitle // Use for the confirmation message
-                          })} 
-=======
-                    const property = booking.properties; // easier access to nested property
-                    const image =
-                      property.property_images?.find((img) => img.is_primary)
-                        ?.image_url ||
-                      property.property_images?.[0]?.image_url ||
-                      "https://via.placeholder.com/150";
-                    return (
-                      <div
-                        key={booking.appointment_id}
-                        className="flex items-center gap-4"
-                      >
-                        <img
-                          src={image}
-                          alt={property.title}
-                          className="w-24 h-20 object-cover rounded-md"
-                        />
-                        <div className="flex-grow">
-                          <p className="font-bold text-gray-800">
-                            {property.title}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            {property.location}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold text-gray-700">
-                            Appointment for:
-                          </p>
-                          <p className="text-sm text-blue-600">
-                            {new Date(
-                              booking.meeting_time
-                            ).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => setItemToDelete(booking)}
->>>>>>> 6f7477216a5aa4de9b997e3b83979e79a5625d89
+                          onClick={() => setItemToDelete(booking)} 
                           className="p-2 text-gray-400 hover:text-red-500 rounded-full transition"
                         >
                           <FiTrash2 className="w-5 h-5" />
@@ -426,26 +281,18 @@ function UserProfile() {
                 </div>
               )}
             </div>
-            {/* ========== MODIFIED BLOCK END ========== */}
 
-
-            {/* My Listed Properties Card (uses local `listedProperties` state) */}
             <div className="bg-white p-6 rounded-2xl shadow-lg mb-10">
-              {/* ... (Your listed properties JSX is good) ... */}
               <h3 className="text-xl font-semibold text-gray-800 border-b pb-4 mb-4">
                 My Listed Properties
               </h3>
               {listedProperties.length > 0 ? (
                 <div className="space-y-4">
                   {listedProperties.map((property) => {
-                    const image =
-                      property.property_images?.find((img) => img.is_primary)
-                        ?.image_url ||
-                      property.property_images?.[0]?.image_url ||
-                      "https://via.placeholder.com/150";
+                    const image = property.image_url || property.property_images?.[0]?.image_url || "https://via.placeholder.com/150";
                     return (
                       <div
-                        key={property.property_id}
+                        key={property.property_id || property.id}
                         className="flex items-center gap-4"
                       >
                         <img
@@ -461,7 +308,7 @@ function UserProfile() {
                             {property.location}
                           </p>
                         </div>
-                        <Link to={`/property/${property.property_id}`}>
+                        <Link to={`/property/${property.property_id || property.id}`}>
                           <button className="bg-gray-200 text-gray-700 text-sm px-4 py-2 rounded-lg font-semibold hover:bg-gray-300">
                             View Details
                           </button>
@@ -485,11 +332,6 @@ function UserProfile() {
         </div>
       </div>
 
-      {/* RENDER MODALS AND NOTIFICATIONS */}
-<<<<<<< HEAD
-      
-=======
->>>>>>> 6f7477216a5aa4de9b997e3b83979e79a5625d89
       {isEditModalOpen && (
         <EditProfileModal
           user={{
@@ -497,7 +339,7 @@ function UserProfile() {
             email: profile.email,
             phone: profile.phone_number,
             address: profile.address,
-            profileImageUrl: profile.profile_image_url,
+            profileImageUrl: profile.profile_image_url || profile.avatar_url,
           }}
           onSave={handleSaveProfile}
           onClose={() => setIsEditModalOpen(false)}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import PropertyGrid from "../components/property_grid";
 import { useAuth } from "../context/AuthContext";
-import { supabase } from "../lib/supabaseClient";
+import api from "../services/api";
 import { Link } from "react-router-dom";
 
 // This component is now self-sufficient and fetches its own data.
@@ -23,32 +23,28 @@ export default function Cart() {
 
       setLoading(true);
 
-      // 1. Get the list of property IDs from the user's wishlist
-      const { data: idsData, error: idsError } = await supabase
-        .from("wishlists")
-        .select("property_id")
-        .eq("user_id", user.id);
+      try {
+        // 1. Get the list of property IDs from the user's wishlist
+        const { data: idsData } = await api.get(`/wishlists/${user.id}`);
 
-      if (idsError || !idsData || idsData.length === 0) {
-        setWishlistedProperties([]);
-        setWishlistIds(new Set());
-        setLoading(false);
-        return;
-      }
+        if (!idsData || idsData.length === 0) {
+          setWishlistedProperties([]);
+          setWishlistIds(new Set());
+          setLoading(false);
+          return;
+        }
 
-      const propertyIds = idsData.map((item) => item.property_id);
-      setWishlistIds(new Set(propertyIds));
+        const propertyIds = idsData.map((item) => item.property_id);
+        setWishlistIds(new Set(propertyIds));
 
-      // 2. Fetch the full details for those properties using our new function
-      const { data: propertiesData, error: propertiesError } =
-        await supabase.rpc("get_properties_by_ids", {
-          property_ids_array: propertyIds,
+        // 2. Fetch the full details for those properties using our backend
+        const { data: propertiesData } = await api.post("/properties/by-ids", {
+          ids: propertyIds,
         });
 
-      if (propertiesError) {
-        console.error("Error fetching wishlist properties:", propertiesError);
-      } else {
         setWishlistedProperties(propertiesData || []);
+      } catch (error) {
+        console.error("Error fetching wishlist properties:", error);
       }
 
       setLoading(false);
@@ -61,15 +57,12 @@ export default function Cart() {
   const handleToggleWishlist = async (propertyId) => {
     if (!user) return;
 
-    // The item is guaranteed to be in the wishlist on this page
-    const { error } = await supabase
-      .from("wishlists")
-      .delete()
-      .match({ user_id: user.id, property_id: propertyId });
+    try {
+      // The item is guaranteed to be in the wishlist on this page
+      await api.delete("/wishlists", {
+        data: { user_id: user.id, property_id: propertyId }
+      });
 
-    if (error) {
-      console.error("Error removing from wishlist:", error);
-    } else {
       // For a great user experience, remove the item from the UI immediately
       setWishlistIds((prev) => {
         const newSet = new Set(prev);
@@ -79,6 +72,8 @@ export default function Cart() {
       setWishlistedProperties((prev) =>
         prev.filter((p) => p.property_id !== propertyId)
       );
+    } catch (error) {
+      console.error("Error removing from wishlist:", error);
     }
   };
 

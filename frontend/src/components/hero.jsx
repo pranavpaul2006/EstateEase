@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import PropertyGrid from "./property_grid";
-import { supabase } from "../lib/supabaseClient";
+import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
 export default function Hero() {
@@ -29,21 +29,15 @@ export default function Hero() {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const { data: randomProps } = await supabase.rpc(
-        "get_random_properties",
-        {
-          limit_count: 6,
-        }
-      );
-      setProperties(randomProps || []);
-
-      const { data: locationsData } = await supabase
-        .from("properties")
-        .select("location");
-      if (locationsData) {
+      try {
+        const { data: allProps } = await api.get('/properties');
+        // Shuffle and slice to simulate get_random_properties
+        const shuffled = [...allProps].sort(() => 0.5 - Math.random());
+        setProperties(shuffled.slice(0, 6));
+        
         const uniqueCities = [
           ...new Set(
-            locationsData
+            allProps
               .map((p) => p.location?.split(",")[0]?.trim())
               .filter(Boolean)
           ),
@@ -52,20 +46,20 @@ export default function Hero() {
           ...prev,
           cities: uniqueCities.map((c) => ({ label: c, value: c })),
         }));
-      }
 
-      const { data: typesData } = await supabase
-        .from("property_types")
-        .select("type_name");
-      if (typesData) {
-        const types = typesData.map((t) => t.type_name);
-        setDropdownData((prev) => ({
-          ...prev,
-          propertyTypes: types.map((t) => ({ label: t, value: t })),
-        }));
+        const { data: typesData } = await api.get('/properties/types');
+        if (typesData) {
+          const types = typesData.map((t) => t.type_name);
+          setDropdownData((prev) => ({
+            ...prev,
+            propertyTypes: types.map((t) => ({ label: t, value: t })),
+          }));
+        }
+      } catch (err) {
+        console.error("Error fetching hero data:", err);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
     fetchData();
   }, []);
@@ -77,12 +71,13 @@ export default function Hero() {
       return;
     }
     const fetchWishlist = async () => {
-      const { data } = await supabase
-        .from("wishlists")
-        .select("property_id")
-        .eq("user_id", user.id);
-      if (data) {
-        setWishlist(new Set(data.map((item) => item.property_id)));
+      try {
+        const { data } = await api.get('/wishlists');
+        if (data) {
+          setWishlist(new Set(data.map((item) => item.property_id)));
+        }
+      } catch (error) {
+        console.error("Error fetching wishlist:", error);
       }
     };
     fetchWishlist();
@@ -115,19 +110,14 @@ export default function Hero() {
     const isWishlisted = new Set(wishlist).has(propertyId);
     try {
       if (isWishlisted) {
-        await supabase
-          .from("wishlists")
-          .delete()
-          .match({ user_id: user.id, property_id: propertyId });
+        await api.delete('/wishlists', { data: { property_id: propertyId } });
         setWishlist((prev) => {
           const newSet = new Set(prev);
           newSet.delete(propertyId);
           return newSet;
         });
       } else {
-        await supabase
-          .from("wishlists")
-          .insert({ user_id: user.id, property_id: propertyId });
+        await api.post('/wishlists', { property_id: propertyId });
         setWishlist((prev) => new Set(prev).add(propertyId));
       }
     } catch (error) {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { supabase } from "../lib/supabaseClient"; 
+import api from "../services/api";
 
 function EditProfileModal({ user, onSave, onClose }) {
   const [formData, setFormData] = useState({
@@ -34,13 +34,10 @@ function EditProfileModal({ user, onSave, onClose }) {
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Check file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         alert("File size too large! Please select an image under 5MB.");
         return;
       }
-
-      // Check file type
       if (!file.type.startsWith('image/')) {
         alert("Please select a valid image file!");
         return;
@@ -48,7 +45,6 @@ function EditProfileModal({ user, onSave, onClose }) {
 
       setSelectedFile(file);
       
-      // Create preview
       const reader = new FileReader();
       reader.onload = (e) => {
         setPreviewUrl(e.target.result);
@@ -57,48 +53,14 @@ function EditProfileModal({ user, onSave, onClose }) {
     }
   };
 
-  const uploadToSupabase = async (file) => {
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
-      const filePath = `profile-pictures/${fileName}`;
-
-      const { data, error } = await supabase.storage
-        .from('avatars') // Make sure this bucket exists
-        .upload(filePath, file);
-
-      if (error) throw error;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      return publicUrl;
-    } catch (error) {
-      console.error('Upload error:', error);
-      throw error;
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setUploading(true);
-
     try {
-      let imageUrl = formData.profileImageUrl;
-
-      // Upload new file if selected
-      if (selectedFile) {
-        imageUrl = await uploadToSupabase(selectedFile);
-      }
-
-      // Save profile with the image URL
       await onSave({
         ...formData,
-        profileImageUrl: imageUrl
+        file: selectedFile
       });
-
     } catch (error) {
       alert(`Error: ${error.message}`);
     } finally {
@@ -126,14 +88,12 @@ function EditProfileModal({ user, onSave, onClose }) {
         
         <h2 className="text-2xl font-bold mb-6 text-gray-800">Edit Profile</h2>
         
-        {/* Profile Picture Upload Section */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-3">
             Profile Picture
           </label>
           
           <div className="flex items-center space-x-6">
-            {/* Image Preview */}
             <div className="relative">
               <img
                 src={previewUrl || "https://via.placeholder.com/150"}
@@ -142,7 +102,6 @@ function EditProfileModal({ user, onSave, onClose }) {
               />
             </div>
 
-            {/* Upload Controls */}
             <div className="flex flex-col space-y-2">
               <label className="cursor-pointer bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition text-center text-sm">
                 Browse Photo
@@ -230,7 +189,6 @@ function EditProfileModal({ user, onSave, onClose }) {
             />
           </div>
 
-          {/* URL fallback input (hidden by default) */}
           <div className="border-t pt-4">
             <details className="text-sm">
               <summary className="cursor-pointer text-gray-600 hover:text-gray-800">
@@ -249,7 +207,6 @@ function EditProfileModal({ user, onSave, onClose }) {
             </details>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex justify-end gap-4 pt-4">
             <button
               type="button"

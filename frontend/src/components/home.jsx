@@ -3,14 +3,10 @@ import Hero from './hero';
 import PropertyGrid from './property_grid';
 import Footer from './footer';
 
-function Home({ properties, wishlist, onToggleWishlist }) {
+function Home() {
   return (
     <div className="pt-20">
-      <Hero
-        properties={properties}
-        wishlist={wishlist}
-        onToggleWishlist={onToggleWishlist}
-      />
+      <Hero />
 
       {/* <PropertyGrid /> */}
       <Footer/>
