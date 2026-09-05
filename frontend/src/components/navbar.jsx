@@ -40,19 +40,19 @@ function Navbar({ onLoginClick, isLoggedIn, onLogout }) {
               to="/buy"
               className="text-white hover:text-gray-200 font-semibold"
             >
-              BUY
+              Explore
             </Link>
             <Link
               to="/sell"
               className="text-white hover:text-gray-200 font-semibold"
             >
-              SELL
+              List
             </Link>
             <Link
              to="/cart"
              className="text-white hover:text-gray-200 font-semibold"
             >
-                WISHLIST
+                Wishlist
             </Link>
           </div>
         </div>
