@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-// ... (other imports remain the same)
+import { useLocation } from "react-router-dom";
 import PropertyGrid from "./property_grid";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -7,13 +7,18 @@ import { useAuth } from "../context/AuthContext";
 export default function Buy() {
   // ... (All state and functions from the previous working version remain the same)
   const { user } = useAuth();
-  const [cityFilter, setCityFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const initialCity = searchParams.get("city") || "";
+  const initialType = searchParams.get("type") || "";
+
+  const [cityFilter, setCityFilter] = useState(initialCity);
+  const [typeFilter, setTypeFilter] = useState(initialType);
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(50000000);
   const [appliedFilters, setAppliedFilters] = useState({
-    city: "",
-    type: "",
+    city: initialCity,
+    type: initialType,
     min: 0,
     max: 50000000,
   });
