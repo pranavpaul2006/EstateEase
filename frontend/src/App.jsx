@@ -13,6 +13,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Buy from "./components/buy";
 import Sell from "./components/Sell";
 import AboutUs from "./components/aboutus";
+import Footer from "./components/footer";
 
 function App() {
   // --- Use Auth Context ---
@@ -44,9 +45,9 @@ function App() {
   }
 
   return (
-    <div>
+    <div className="flex flex-col min-h-screen">
       <Navbar onLoginClick={handleLoginClick} isLoggedIn={isLoggedIn} />
-      <main>
+      <main className="flex-grow">
         <Routes>
           {/* Public Routes */}
           <Route
@@ -93,7 +94,7 @@ function App() {
           />
         </Routes>
       </main>
-
+            <Footer />
       {/* Login Modal */}
       {showLogin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">

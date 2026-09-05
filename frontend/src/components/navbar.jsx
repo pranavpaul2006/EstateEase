@@ -15,71 +15,81 @@ function Navbar({ onLoginClick, isLoggedIn, onLogout }) {
   };
 
   return (
-    <nav className="bg-[#52ab98]  fixed w-full z-50 shadow-md">
+    <nav className="bg-[#52ab98] fixed w-full z-50 shadow-md">
       <div className="px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-        {/* Logo */}
-        <div className="flex items-center gap-4">
-          <a href="/" onClick={handleLogoClick} className="flex items-center">
-            <img
-              src="/images/estateease-logo.png"
-              alt="EstateEase"
-              className="h-16 w-16 object-contain flex-shrink-0"
-            />
-            <span className="ml-2 font-bold text-2xl text-white select-none">
-              EstateEase
-            </span>
-          </a>
-        </div>
+        
+        {/* Left Side: Logo + Nav Links */}
+        <div className="flex items-center gap-4 lg:gap-10">
+          {/* Logo */}
+          <div className="flex items-center gap-4">
+            <a href="/" onClick={handleLogoClick} className="flex items-center">
+              <img
+                src="/images/estateease-logo.png"
+                alt="EstateEase"
+                className="h-16 w-16 object-contain flex-shrink-0"
+              />
+              <span className="ml-2 font-bold text-2xl text-white select-none">
+                EstateEase
+              </span>
+            </a>
+          </div>
 
-        {/* Desktop Links */}
-        <div className="hidden md:flex items-center gap-6">
-          <Link
-            to="/buy"
-            className="text-white hover:text-gray-200 font-semibold"
-          >
-            BUY
-          </Link>
-          <Link
-            to="/sell"
-            className="text-white hover:text-gray-200 font-semibold"
-          >
-            SELL
-          </Link>
-          <Link to="/cart">
-            <button className="bg-white text-[#52ab98] px-4 py-2 rounded-md font-semibold hover:bg-gray-100 cursor-pointer">
-              WISH
-            </button>
-          </Link>
-
-          {/* Auth Buttons */}
-
-          {isLoggedIn ? (
-            <>
-              <Link to="/profile">
-                <button className="flex items-center justify-center bg-white text-[#52ab98] p-2 rounded-full font-semibold hover:bg-gray-100 cursor-pointer text-xl border border-[#52ab98]">
-                  <FiUser />
-                </button>
-              </Link>
-            </>
-          ) : (
-            <button
-              onClick={onLoginClick}
-              className="flex items-center gap-2 bg-white text-[#52ab98] px-4 py-2 rounded-md font-semibold hover:bg-gray-100 cursor-pointer"
+          {/* Desktop Links */}
+          <div className="hidden md:flex items-center gap-6">
+            <Link
+              to="/buy"
+              className="text-white hover:text-gray-200 font-semibold"
             >
-              <span>LOGIN</span>
-            </button>
-          )}
+              BUY
+            </Link>
+            <Link
+              to="/sell"
+              className="text-white hover:text-gray-200 font-semibold"
+            >
+              SELL
+            </Link>
+            <Link
+             to="/cart"
+             className="text-white hover:text-gray-200 font-semibold"
+            >
+                WISHLIST
+            </Link>
+          </div>
         </div>
 
-        {/* Mobile Hamburger */}
-        <div className="md:hidden flex items-center">
-          <button
-            onClick={toggleMenu}
-            className="text-white text-3xl focus:outline-none"
-            aria-label="Toggle menu"
-          >
-            {isOpen ? <FiX /> : <FiMenu />}
-          </button>
+        {/* Right Side: Auth + Mobile Hamburger */}
+        <div className="flex items-center gap-4">
+          
+          {/* Auth Buttons */}
+          <div className="hidden md:block">
+            {isLoggedIn ? (
+              <>
+                <Link to="/profile">
+                  <button className="flex items-center justify-center bg-white text-[#52ab98] p-2 rounded-full font-semibold hover:bg-gray-100 cursor-pointer text-xl border border-[#52ab98]">
+                    <FiUser />
+                  </button>
+                </Link>
+              </>
+            ) : (
+              <button
+                onClick={onLoginClick}
+                className="flex items-center gap-2 bg-white text-[#52ab98] px-4 py-2 rounded-md font-semibold hover:bg-gray-100 cursor-pointer"
+              >
+                <span>LOGIN</span>
+              </button>
+            )}
+          </div>
+
+          {/* Mobile Hamburger */}
+          <div className="md:hidden flex items-center">
+            <button
+              onClick={toggleMenu}
+              className="text-white text-3xl focus:outline-none"
+              aria-label="Toggle menu"
+            >
+              {isOpen ? <FiX /> : <FiMenu />}
+            </button>
+          </div>
         </div>
       </div>
 
