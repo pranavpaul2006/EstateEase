@@ -56,9 +56,8 @@ function Navbar({ onLoginClick, isLoggedIn, onLogout }) {
           {isLoggedIn ? (
             <>
               <Link to="/profile">
-                <button className="flex items-center gap-2 bg-white text-[#52ab98] px-4 py-2 rounded-md font-semibold hover:bg-gray-100 cursor-pointer">
+                <button className="flex items-center justify-center bg-white text-[#52ab98] p-2 rounded-full font-semibold hover:bg-gray-100 cursor-pointer text-xl border border-[#52ab98]">
                   <FiUser />
-                  <span>MY ACCOUNT</span>
                 </button>
               </Link>
             </>

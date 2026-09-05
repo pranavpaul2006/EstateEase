@@ -189,24 +189,6 @@ function EditProfileModal({ user, onSave, onClose }) {
             />
           </div>
 
-          <div className="border-t pt-4">
-            <details className="text-sm">
-              <summary className="cursor-pointer text-gray-600 hover:text-gray-800">
-                Or enter image URL
-              </summary>
-              <div className="mt-2">
-                <input
-                  type="url"
-                  name="profileImageUrl"
-                  value={formData.profileImageUrl}
-                  onChange={handleChange}
-                  placeholder="https://example.com/image.jpg"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                />
-              </div>
-            </details>
-          </div>
-
           <div className="flex justify-end gap-4 pt-4">
             <button
               type="button"
