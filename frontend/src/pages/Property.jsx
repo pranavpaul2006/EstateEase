@@ -4,6 +4,7 @@ import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import ConfirmModal from "./ConfirmModal";
 import Notification from "../components/Notification";
+import { FaHeart, FaRegHeart } from "react-icons/fa";
 
 const DEFAULT_IMAGE_URL =
   "https://via.placeholder.com/800x600.png?text=Image+Not+Available";
@@ -16,6 +17,8 @@ const Property = () => {
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
 
   // State for appointment booking
   const [selectedDate, setSelectedDate] = useState(
@@ -63,6 +66,56 @@ const Property = () => {
 
     fetchPropertyDetails();
   }, [id]);
+
+  useEffect(() => {
+    const fetchWishlistStatus = async () => {
+      if (!user || !id) {
+        setIsWishlisted(false);
+        return;
+      }
+
+      try {
+        const { data } = await api.get(`/wishlists/${user.id}`);
+        setIsWishlisted(
+          (data || []).some((item) => item.property_id === id)
+        );
+      } catch (err) {
+        console.error("Error fetching wishlist status:", err);
+      }
+    };
+
+    fetchWishlistStatus();
+  }, [id, user]);
+
+  const handleToggleWishlist = async () => {
+    if (!user) {
+      setError("Please log in to add this property to your wishlist.");
+      return;
+    }
+
+    const propertyId = property?.property_id || id;
+    setWishlistLoading(true);
+    try {
+      if (isWishlisted) {
+        await api.delete("/wishlists", {
+          data: { user_id: user.id, property_id: propertyId },
+        });
+      } else {
+        await api.post("/wishlists", {
+          user_id: user.id,
+          property_id: propertyId,
+        });
+      }
+
+      setIsWishlisted((previous) => !previous);
+      setError("");
+    } catch (err) {
+      console.error("Error updating wishlist:", err);
+      setError("Unable to update your wishlist. Please try again.");
+    } finally {
+      setWishlistLoading(false);
+    }
+  };
 
   // Handle the booking confirmation
   const handleConfirmBooking = async () => {
@@ -212,7 +265,7 @@ const Property = () => {
               {property.property_description}
             </p>
 
-            {property.is_available && user?.id !== property.owner_id && (
+            {property.is_available && (
               <div className="mt-10 pt-8 border-t border-gray-300">
                 <h3 className="text-3xl font-semibold text-gray-800 mb-4">
                   Schedule a Visit
@@ -230,11 +283,48 @@ const Property = () => {
                   />
                   <button
                     onClick={handleBookClick}
-                    className="w-full sm:w-auto px-8 py-3 rounded-lg bg-blue-600 text-white font-semibold"
+                    disabled={user?.id === property.owner_id}
+                    title={
+                      user?.id === property.owner_id
+                        ? "You cannot book an appointment for your own property"
+                        : "Book an appointment"
+                    }
+                    className="w-full sm:w-auto px-8 py-3 rounded-lg bg-blue-600 text-white font-semibold disabled:cursor-not-allowed disabled:bg-gray-400"
                   >
                     Book Appointment
                   </button>
+                  <button
+                    type="button"
+                    onClick={handleToggleWishlist}
+                    disabled={wishlistLoading}
+                    aria-label={
+                      isWishlisted
+                        ? "Remove from wishlist"
+                        : "Add to wishlist"
+                    }
+                    title={
+                      isWishlisted
+                        ? "Remove from wishlist"
+                        : "Add to wishlist"
+                    }
+                    className={`flex items-center justify-center rounded-lg border px-4 py-3 transition ${
+                      isWishlisted
+                        ? "border-red-500 bg-red-50 text-red-600"
+                        : "border-gray-300 bg-white text-red-500 hover:bg-red-50"
+                    } disabled:cursor-not-allowed disabled:opacity-60`}
+                  >
+                    {isWishlisted ? (
+                      <FaHeart className="text-xl text-red-600" />
+                    ) : (
+                      <FaRegHeart className="text-xl text-red-500" />
+                    )}
+                  </button>
                 </div>
+                {user?.id === property.owner_id && (
+                  <p className="text-sm text-gray-500 mt-3">
+                    You can manage this listing, but you cannot book an appointment for your own property.
+                  </p>
+                )}
                 {error && <p className="text-sm text-red-600 mt-3">{error}</p>}
               </div>
             )}

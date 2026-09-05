@@ -18,6 +18,18 @@ class AppointmentController {
       next(error);
     }
   }
+
+  async deleteAppointment(req, res, next) {
+    try {
+      const appointment = await appointmentService.deleteAppointment(
+        req.supabase,
+        req.params.id
+      );
+      res.json(appointment);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new AppointmentController();

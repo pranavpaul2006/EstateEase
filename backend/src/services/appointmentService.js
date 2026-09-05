@@ -20,6 +20,18 @@ class AppointmentService {
     if (error) throw new Error(error.message);
     return data;
   }
+
+  async deleteAppointment(supabase, appointmentId) {
+    const { data, error } = await supabase
+      .from("appointments")
+      .delete()
+      .eq("appointment_id", appointmentId)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  }
 }
 
 module.exports = new AppointmentService();

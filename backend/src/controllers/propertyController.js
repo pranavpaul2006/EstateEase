@@ -91,6 +91,18 @@ class PropertyController {
   async createProperty(req, res, next) {
     try {
       const { title, description, price, city, state, propertyType, ownerEmail, area } = req.body;
+      const parsedPrice = Number(price);
+      const parsedArea = Number(area);
+
+      if (!title || !city || !state || !propertyType || !ownerEmail) {
+        return res.status(400).json({ message: "Missing required property information." });
+      }
+      if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+        return res.status(400).json({ message: "Price must be a positive number." });
+      }
+      if (!Number.isFinite(parsedArea) || parsedArea <= 0) {
+        return res.status(400).json({ message: "Area must be a positive number." });
+      }
       
       const typeId = await propertyService.getPropertyTypeId(req.supabase, propertyType);
       
@@ -107,11 +119,11 @@ class PropertyController {
       const propertyData = {
         title,
         property_description: description,
-        price: parseFloat(price),
+        price: parsedPrice,
         location: `${city}, ${state}`,
         property_type_id: typeId,
         owner_id: profile.id,
-        area_sqft: parseInt(area) || 0,
+        area_sqft: Math.trunc(parsedArea),
         is_available: true
       };
 

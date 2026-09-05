@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { FiHome, FiDollarSign, FiUser, FiChevronLeft, FiChevronRight, FiCheckCircle, FiUploadCloud, FiX, FiLoader } from "react-icons/fi";
+import { FiHome, FiDollarSign, FiChevronLeft, FiChevronRight, FiCheckCircle, FiUploadCloud, FiX, FiLoader } from "react-icons/fi";
 import api from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 const AMENITIES_LIST = [
   "Swimming Pool", "Gym", "Parking", "Garden", "24/7 Security", "Balcony", "Fully Furnished", "Pet Friendly"
 ];
 
 const Sell = ({ onAddProperty }) => {
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     propertyType: "",
-    location: "",
+    city: "",
+    state: "",
     price: "",
     bedrooms: "",
     bathrooms: "",
@@ -28,6 +31,43 @@ const Sell = ({ onAddProperty }) => {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    const loadUserContact = async () => {
+      if (!user) {
+        setFormData((prev) => ({
+          ...prev,
+          ownerName: "",
+          ownerEmail: "",
+          ownerPhone: "",
+        }));
+        return;
+      }
+
+      try {
+        const { data: profile } = await api.get(`/users/${user.id}`);
+        setFormData((prev) => ({
+          ...prev,
+          ownerName:
+            profile?.full_name || user.user_metadata?.full_name || "",
+          ownerEmail: profile?.email || user.email || "",
+          ownerPhone:
+            profile?.phone_number || user.user_metadata?.phone_number || "",
+        }));
+      } catch (error) {
+        console.error("Error fetching user contact information:", error);
+        setFormData((prev) => ({
+          ...prev,
+          ownerName: user.user_metadata?.full_name || "",
+          ownerEmail: user.email || "",
+          ownerPhone: user.user_metadata?.phone_number || "",
+        }));
+      }
+    };
+
+    loadUserContact();
+  }, [user]);
 
   // **MODIFIED**: Fetches property types from your Supabase table
   useEffect(() => {
@@ -69,14 +109,37 @@ const Sell = ({ onAddProperty }) => {
     }));
   };
 
-  const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
+  const addImages = (files) => {
     const imageFiles = files.filter(file => file.type.startsWith('image/'));
     const newImages = imageFiles.map(file => ({
       file,
       preview: URL.createObjectURL(file)
     }));
     setFormData(prev => ({ ...prev, images: [...prev.images, ...newImages].slice(0, 5) }));
+  };
+
+  const handleFileChange = (e) => {
+    addImages(Array.from(e.target.files));
+    e.target.value = "";
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    addImages(Array.from(e.dataTransfer.files));
   };
   
   const removeImage = (index) => {
@@ -90,7 +153,8 @@ const Sell = ({ onAddProperty }) => {
     const newErrors = {};
     if (step === 1) {
       if (!formData.propertyType) newErrors.propertyType = "Please select a property type.";
-      if (!formData.location.trim()) newErrors.location = "Location is required.";
+      if (!formData.city.trim()) newErrors.city = "City is required.";
+      if (!formData.state.trim()) newErrors.state = "State is required.";
     }
     if (step === 2) {
       if (!formData.price || formData.price <= 0) newErrors.price = "Please enter a valid price.";
@@ -116,11 +180,29 @@ const Sell = ({ onAddProperty }) => {
 
 const handleSubmit = async (e) => {
     e.preventDefault();
-    // --- All your validation logic stays the same ---
-    const finalErrors = {};
-    if (!formData.ownerName.trim()) finalErrors.ownerName = "Your name is required.";
-    if (!formData.ownerEmail || !/\S+@\S+\.\S+/.test(formData.ownerEmail)) finalErrors.ownerEmail = "A valid email is required.";
-    if (!formData.ownerPhone.trim()) finalErrors.ownerPhone = "A phone number is required.";
+    if (step !== 2) {
+      return;
+    }
+
+  const finalErrors = {};
+  if (!formData.propertyType) {
+    finalErrors.propertyType = "Please select a property type.";
+  }
+  if (!formData.city.trim()) {
+    finalErrors.city = "City is required.";
+  }
+  if (!formData.state.trim()) {
+    finalErrors.state = "State is required.";
+  }
+  if (!formData.price || Number(formData.price) <= 0) {
+    finalErrors.price = "Please enter a valid price.";
+  }
+  if (!formData.area || Number(formData.area) <= 0) {
+    finalErrors.area = "Please enter a valid area.";
+  }
+  if (!formData.ownerName.trim()) finalErrors.ownerName = "Your name is required.";
+  if (!formData.ownerEmail || !/\S+@\S+\.\S+/.test(formData.ownerEmail)) finalErrors.ownerEmail = "A valid email is required.";
+  if (!formData.ownerPhone.trim()) finalErrors.ownerPhone = "A phone number is required.";
     setErrors(finalErrors);
     if (Object.keys(finalErrors).length > 0) return;
 
@@ -128,16 +210,14 @@ const handleSubmit = async (e) => {
 
     try {
         const submitData = new FormData();
-        submitData.append('title', `${formData.propertyType} in ${formData.location}`);
+        submitData.append('title', `${formData.propertyType} in ${formData.city}`);
         submitData.append('description', formData.description);
         submitData.append('propertyType', formData.propertyType);
         submitData.append('price', formData.price);
         submitData.append('area', formData.area);
-        submitData.append('location', formData.location);
-        
-        const locationParts = formData.location.split(',');
-        submitData.append('city', locationParts[0]?.trim() || '');
-        submitData.append('state', locationParts[1]?.trim() || '');
+        submitData.append('location', `${formData.city}, ${formData.state}`);
+        submitData.append('city', formData.city);
+        submitData.append('state', formData.state);
         
         submitData.append('ownerName', formData.ownerName);
         submitData.append('ownerEmail', formData.ownerEmail);
@@ -149,7 +229,7 @@ const handleSubmit = async (e) => {
             });
         }
 
-        const res = await api.post('/properties', submitData, {
+        await api.post('/properties', submitData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }
@@ -178,9 +258,9 @@ const handleSubmit = async (e) => {
             <p className="text-gray-600 mb-8">
               Your property has been successfully listed on EstateEase.
             </p>
-            <Link to="/">
+            <Link to="/buy">
                 <button className="px-8 py-3 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition cursor-pointer">
-                    Go to Home
+                    View Properties
                 </button>
             </Link>
         </div>
@@ -188,7 +268,7 @@ const handleSubmit = async (e) => {
     );
   }
 
-  const progressPercentage = ((step - 1) / 2) * 100;
+  const progressPercentage = ((step - 1) / 1) * 100;
 
   return (
     <div className="bg-gray-50 min-h-screen pt-28 pb-12 w-full px-4 lg:px-8">
@@ -204,7 +284,6 @@ const handleSubmit = async (e) => {
                 <ul className="space-y-2 text-sm text-gray-300">
                     <li className={`flex items-center gap-3 transition-colors ${step >= 1 ? 'text-white' : ''}`}><FiHome className={`transition-transform ${step >= 1 ? 'scale-110 text-blue-400' : ''}`} /> Basic Information & Photos</li>
                     <li className={`flex items-center gap-3 transition-colors ${step >= 2 ? 'text-white' : ''}`}><FiDollarSign className={`transition-transform ${step >= 2 ? 'scale-110 text-blue-400' : ''}`} /> Details, Price & Amenities</li>
-                    <li className={`flex items-center gap-3 transition-colors ${step >= 3 ? 'text-white' : ''}`}><FiUser className={`transition-transform ${step >= 3 ? 'scale-110 text-blue-400' : ''}`} /> Contact Information</li>
                 </ul>
             </div>
         </div>
@@ -215,8 +294,8 @@ const handleSubmit = async (e) => {
             {/* Progress Bar */}
             <div>
                 <div className="flex justify-between items-center mb-2">
-                    <p className="text-sm font-medium text-blue-600">Step {step} of 3</p>
-                    <p className="text-sm text-gray-500">{step === 1 ? 'Property Info' : step === 2 ? 'Details & Price' : 'Contact'}</p>
+                    <p className="text-sm font-medium text-blue-600">Step {step} of 2</p>
+                    <p className="text-sm text-gray-500">{step === 1 ? 'Property Info' : 'Details & Price'}</p>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                     <div className="bg-blue-500 h-2 rounded-full transition-all duration-500" style={{ width: `${progressPercentage}%` }}></div>
@@ -237,13 +316,35 @@ const handleSubmit = async (e) => {
                       </select>
                   </div>
                   <div>
-                      <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">Location / City</label>
-                      <input type="text" id="location" name="location" value={formData.location} onChange={handleChange} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.location ? 'border-red-500' : 'border-gray-300'}`} />
-                      {errors.location && <p className="text-red-500 text-xs mt-1">{errors.location}</p>}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                          <input type="text" id="city" name="city" value={formData.city} onChange={handleChange} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.city ? 'border-red-500' : 'border-gray-300'}`} />
+                          {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
+                        </div>
+                        <div>
+                          <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                          <input type="text" id="state" name="state" value={formData.state} onChange={handleChange} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.state ? 'border-red-500' : 'border-gray-300'}`} />
+                          {errors.state && <p className="text-red-500 text-xs mt-1">{errors.state}</p>}
+                        </div>
+                      </div>
+                  </div>
+                  <div>
+                      <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                      <textarea id="description" name="description" value={formData.description} onChange={handleChange} rows="4" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
                   </div>
                   <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Property Images (Optional, Max 5)</label>
-                      <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md transition-colors hover:border-blue-500 border-gray-300">
+                      <div
+                          onDragOver={handleDragOver}
+                          onDragLeave={handleDragLeave}
+                          onDrop={handleDrop}
+                          className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md transition-colors ${
+                              isDragging
+                                  ? "border-blue-500 bg-blue-50"
+                                  : "border-gray-300 hover:border-blue-500"
+                          }`}
+                      >
                           <div className="space-y-1 text-center">
                               <FiUploadCloud className="mx-auto h-12 w-12 text-gray-400"/>
                               <div className="flex text-sm text-gray-600">
@@ -286,10 +387,6 @@ const handleSubmit = async (e) => {
                       </div>
                   </div>
                   <div>
-                      <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                      <textarea id="description" name="description" value={formData.description} onChange={handleChange} rows="4" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-                  </div>
-                  <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Amenities</label>
                       <div className="flex flex-wrap gap-2">
                           {AMENITIES_LIST.map(amenity => (
@@ -302,26 +399,6 @@ const handleSubmit = async (e) => {
               </section>
               )}
 
-              {step === 3 && (
-              <section className="space-y-4 animate-fade-in">
-                  <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-800"><FiUser /> Your Contact Information</h2>
-                  <div>
-                      <label htmlFor="ownerName" className="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
-                      <input type="text" id="ownerName" name="ownerName" value={formData.ownerName} onChange={handleChange} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.ownerName ? 'border-red-500' : 'border-gray-300'}`} />
-                      {errors.ownerName && <p className="text-red-500 text-xs mt-1">{errors.ownerName}</p>}
-                  </div>
-                  <div>
-                      <label htmlFor="ownerEmail" className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                      <input type="email" id="ownerEmail" name="ownerEmail" value={formData.ownerEmail} onChange={handleChange} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.ownerEmail ? 'border-red-500' : 'border-gray-300'}`} />
-                      {errors.ownerEmail && <p className="text-red-500 text-xs mt-1">{errors.ownerEmail}</p>}
-                  </div>
-                  <div>
-                      <label htmlFor="ownerPhone" className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                      <input type="tel" id="ownerPhone" name="ownerPhone" value={formData.ownerPhone} onChange={handleChange} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.ownerPhone ? 'border-red-500' : 'border-gray-300'}`} />
-                      {errors.ownerPhone && <p className="text-red-500 text-xs mt-1">{errors.ownerPhone}</p>}
-                  </div>
-              </section>
-              )}
             </div>
 
             {/* Navigation Buttons */}
@@ -329,7 +406,7 @@ const handleSubmit = async (e) => {
               <button type="button" onClick={prevStep} disabled={step === 1} className="px-6 py-2 bg-gray-200 rounded-lg flex items-center gap-2 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
                 <FiChevronLeft /> Previous
               </button>
-              {step < 3 ? (
+              {step < 2 ? (
                 <button type="button" onClick={nextStep} className="px-6 py-2 bg-blue-500 text-white rounded-lg flex items-center gap-2 hover:bg-blue-600 cursor-pointer">
                   Next <FiChevronRight />
                 </button>

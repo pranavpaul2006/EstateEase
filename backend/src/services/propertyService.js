@@ -17,13 +17,27 @@ class PropertyService {
       .select(`
         *,
         property_types ( type_name ),
-        profiles!owner_id ( full_name, email, phone_number ),
         property_images ( image_url, is_primary )
       `)
       .eq("property_id", id)
-      .single();
+      .limit(1);
     if (error) throw new Error(error.message);
-    return data;
+    const property = data?.[0];
+    if (!property) throw new Error("Property not found.");
+
+    let profile = null;
+    if (property.owner_id) {
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("full_name, email, phone_number")
+        .eq("id", property.owner_id)
+        .limit(1);
+
+      if (profileError) throw new Error(profileError.message);
+      profile = profileData?.[0] || null;
+    }
+
+    return { ...property, profiles: profile };
   }
 
   async getPropertiesByIds(supabase, idsArray) {
