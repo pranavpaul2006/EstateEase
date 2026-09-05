@@ -286,7 +286,7 @@ export default function Buy() {
           <p className="text-center py-8">Loading properties...</p>
         ) : (
           <PropertyGrid
-            properties={properties}
+            properties={properties.filter(p => p.owner_id !== user?.id)}
             wishlist={wishlist}
             onToggleWishlist={handleToggleWishlist}
           />

@@ -33,7 +33,7 @@ export default function Hero() {
         const { data: allProps } = await api.get('/properties');
         // Shuffle and slice to simulate get_random_properties
         const shuffled = [...allProps].sort(() => 0.5 - Math.random());
-        setProperties(shuffled.slice(0, 6));
+        setProperties(shuffled);
         
         const uniqueCities = [
           ...new Set(
@@ -283,7 +283,7 @@ export default function Hero() {
       {/* PROPERTIES SECTION (unchanged logic) */}
       <div className="px-4">
         <PropertyGrid
-          properties={properties}
+          properties={properties.filter(p => p.owner_id !== user?.id).slice(0, 6)}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
         />

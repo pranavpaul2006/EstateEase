@@ -212,7 +212,7 @@ const Property = () => {
               {property.property_description}
             </p>
 
-            {property.is_available && (
+            {property.is_available && user?.id !== property.owner_id && (
               <div className="mt-10 pt-8 border-t border-gray-300">
                 <h3 className="text-3xl font-semibold text-gray-800 mb-4">
                   Schedule a Visit
