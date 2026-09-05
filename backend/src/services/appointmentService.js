@@ -1,7 +1,5 @@
-const { supabase } = require("../config/supabaseClient");
-
 class AppointmentService {
-  async bookAppointment(appointmentData) {
+  async bookAppointment(supabase, appointmentData) {
     const { data, error } = await supabase
       .from("appointments")
       .insert([appointmentData])
@@ -11,7 +9,7 @@ class AppointmentService {
     return data;
   }
 
-  async getUserAppointments(userId) {
+  async getUserAppointments(supabase, userId) {
     const { data, error } = await supabase
       .from("appointments")
       .select(`

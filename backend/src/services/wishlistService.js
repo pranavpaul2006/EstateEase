@@ -1,7 +1,5 @@
-const { supabase } = require("../config/supabaseClient");
-
 class WishlistService {
-  async getWishlist(userId) {
+  async getWishlist(supabase, userId) {
     const { data, error } = await supabase
       .from("wishlists")
       .select("property_id")
@@ -10,7 +8,7 @@ class WishlistService {
     return data;
   }
 
-  async addToWishlist(userId, propertyId) {
+  async addToWishlist(supabase, userId, propertyId) {
     const { data, error } = await supabase
       .from("wishlists")
       .insert({ user_id: userId, property_id: propertyId });
@@ -18,7 +16,7 @@ class WishlistService {
     return data;
   }
 
-  async removeFromWishlist(userId, propertyId) {
+  async removeFromWishlist(supabase, userId, propertyId) {
     const { error } = await supabase
       .from("wishlists")
       .delete()

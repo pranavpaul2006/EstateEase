@@ -1,7 +1,5 @@
-const { supabase } = require("../config/supabaseClient");
-
 class StorageService {
-  async uploadFile(bucket, path, fileBuffer, mimeType) {
+  async uploadFile(supabase, bucket, path, fileBuffer, mimeType) {
     const { data, error } = await supabase.storage
       .from(bucket)
       .upload(path, fileBuffer, {

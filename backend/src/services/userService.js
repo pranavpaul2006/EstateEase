@@ -1,7 +1,5 @@
-const { supabase } = require("../config/supabaseClient");
-
 class UserService {
-  async getProfileByEmail(email) {
+  async getProfileByEmail(supabase, email) {
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
@@ -15,17 +13,17 @@ class UserService {
     return data;
   }
 
-  async getProfileById(userId) {
+  async getProfileById(supabase, userId) {
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", userId)
       .single();
-    if (error) throw new Error(error.message);
+    if (error && error.code !== "PGRST116") throw new Error(error.message);
     return data;
   }
 
-  async createProfile(profileData) {
+  async createProfile(supabase, profileData) {
     const { data, error } = await supabase
       .from("profiles")
       .insert([profileData])
@@ -35,18 +33,19 @@ class UserService {
     return data;
   }
 
-  async updateProfile(userId, updates) {
+  async updateProfile(supabase, userId, updates) {
     const { data, error } = await supabase
       .from("profiles")
       .update(updates)
       .eq("id", userId)
       .select()
-      .single();
+      .maybeSingle();
     if (error) throw new Error(error.message);
+    if (!data) throw new Error("Profile not found to update");
     return data;
   }
 
-  async deleteProfile(userId) {
+  async deleteProfile(supabase, userId) {
     const { error } = await supabase
       .from("profiles")
       .delete()
@@ -55,7 +54,7 @@ class UserService {
     return true;
   }
 
-  async getUserProperties(userId) {
+  async getUserProperties(supabase, userId) {
     const { data, error } = await supabase
       .from("properties")
       .select(`

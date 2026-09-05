@@ -10,4 +10,18 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-module.exports = { supabase };
+const createAuthClient = (req) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return supabase;
+  }
+  
+  const token = authHeader.split(" ")[1];
+  return createClient(supabaseUrl, supabaseKey, {
+    global: {
+      headers: { Authorization: `Bearer ${token}` }
+    }
+  });
+};
+
+module.exports = { supabase, createAuthClient };

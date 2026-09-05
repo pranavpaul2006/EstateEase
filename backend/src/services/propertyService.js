@@ -1,7 +1,5 @@
-const { supabase } = require("../config/supabaseClient");
-
 class PropertyService {
-  async getAllProperties() {
+  async getAllProperties(supabase) {
     const { data, error } = await supabase
       .from("properties")
       .select(`
@@ -13,13 +11,13 @@ class PropertyService {
     return data;
   }
 
-  async getPropertyById(id) {
+  async getPropertyById(supabase, id) {
     const { data, error } = await supabase
       .from("properties")
       .select(`
         *,
         property_types ( type_name ),
-        profiles ( full_name, email, phone_number ),
+        profiles!owner_id ( full_name, email, phone_number ),
         property_images ( image_url, is_primary )
       `)
       .eq("property_id", id)
@@ -28,7 +26,7 @@ class PropertyService {
     return data;
   }
 
-  async getPropertiesByIds(idsArray) {
+  async getPropertiesByIds(supabase, idsArray) {
     if (!idsArray || idsArray.length === 0) return [];
     const { data, error } = await supabase
       .from("properties")
@@ -42,7 +40,7 @@ class PropertyService {
     return data;
   }
 
-  async getRandomProperties(count = 3) {
+  async getRandomProperties(supabase, count = 3) {
     const { data, error } = await supabase.rpc("get_random_properties", { count });
     if (error) {
       // Fallback if RPC doesn't exist
@@ -56,7 +54,7 @@ class PropertyService {
     return data;
   }
 
-  async getLocations() {
+  async getLocations(supabase) {
     const { data, error } = await supabase.from("properties").select("location");
     if (error) throw new Error(error.message);
     
@@ -71,13 +69,13 @@ class PropertyService {
     return Array.from(cities).map(city => ({ city }));
   }
 
-  async getPropertyTypes() {
+  async getPropertyTypes(supabase) {
     const { data, error } = await supabase.from("property_types").select("type_name");
     if (error) throw new Error(error.message);
     return data;
   }
 
-  async searchProperties(searchQuery, location, propertyType, minPrice, maxPrice) {
+  async searchProperties(supabase, searchQuery, location, propertyType, minPrice, maxPrice) {
     let query = supabase.from("properties").select(`
       *,
       property_types!inner(type_name),
@@ -105,7 +103,7 @@ class PropertyService {
     return data;
   }
 
-  async createProperty(propertyData) {
+  async createProperty(supabase, propertyData) {
     const { data, error } = await supabase
       .from("properties")
       .insert([propertyData])
@@ -114,7 +112,7 @@ class PropertyService {
     return data[0];
   }
 
-  async getPropertyTypeId(typeName) {
+  async getPropertyTypeId(supabase, typeName) {
     const { data, error } = await supabase
       .from("property_types")
       .select("id")

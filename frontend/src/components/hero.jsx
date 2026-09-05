@@ -72,7 +72,7 @@ export default function Hero() {
     }
     const fetchWishlist = async () => {
       try {
-        const { data } = await api.get('/wishlists');
+        const { data } = await api.get(`/wishlists/${user.id}`);
         if (data) {
           setWishlist(new Set(data.map((item) => item.property_id)));
         }
@@ -110,14 +110,14 @@ export default function Hero() {
     const isWishlisted = new Set(wishlist).has(propertyId);
     try {
       if (isWishlisted) {
-        await api.delete('/wishlists', { data: { property_id: propertyId } });
+        await api.delete('/wishlists', { data: { user_id: user.id, property_id: propertyId } });
         setWishlist((prev) => {
           const newSet = new Set(prev);
           newSet.delete(propertyId);
           return newSet;
         });
       } else {
-        await api.post('/wishlists', { property_id: propertyId });
+        await api.post('/wishlists', { user_id: user.id, property_id: propertyId });
         setWishlist((prev) => new Set(prev).add(propertyId));
       }
     } catch (error) {
