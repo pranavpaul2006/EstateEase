@@ -191,8 +191,8 @@ const handleSubmit = async (e) => {
   const progressPercentage = ((step - 1) / 2) * 100;
 
   return (
-    <div className="bg-gray-50 min-h-screen pt-28 pb-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto bg-white rounded-2xl shadow-lg overflow-hidden md:grid md:grid-cols-2">
+    <div className="bg-gray-50 min-h-screen pt-28 pb-12 w-full px-4 lg:px-8">
+      <div className="w-full bg-white rounded-2xl shadow-lg overflow-hidden md:grid md:grid-cols-2">
         {/* Left Side: Information */}
         <div className="bg-[#2b6777] p-8 md:p-12 text-white flex flex-col justify-center">
             <h1 className="text-3xl lg:text-4xl font-bold mb-4 leading-tight">List Your Property with EstateEase</h1>

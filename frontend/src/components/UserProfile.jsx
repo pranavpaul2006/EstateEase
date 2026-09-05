@@ -160,8 +160,8 @@ function UserProfile() {
 
   return (
     <>
-      <div className="bg-gray-50 min-h-screen pt-28 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="bg-gray-50 min-h-screen pt-28 pb-12 w-full px-4 lg:px-8">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column: Profile Card */}
           <div className="lg:col-span-1">
             <div className="bg-white p-6 rounded-2xl shadow-lg text-center sticky top-28">

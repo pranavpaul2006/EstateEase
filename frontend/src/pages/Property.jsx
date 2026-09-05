@@ -141,7 +141,7 @@ const Property = () => {
   return (
     <>
       <div className="bg-gray-50 min-h-screen pt-20 pb-10">
-        <div className="w-full mx-auto flex flex-col px-4 sm:px-6 lg:px-12 xl:px-20 2xl:px-32">
+        <div className="w-full flex flex-col px-4 lg:px-8">
           {/* TOP SECTION: Image + Core Details */}
           <div className="grid grid-cols-1 pt-12 lg:grid-cols-2 gap-8 lg:gap-12 xl:gap-16">
             <div className="flex items-center justify-center">

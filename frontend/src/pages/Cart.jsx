@@ -82,8 +82,8 @@ export default function Cart() {
   }
 
   return (
-    <div className="pt-28 pb-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="pt-28 pb-12 w-full px-4 lg:px-8">
+      <div className="w-full">
         <h1 className="text-3xl font-bold text-gray-800 mb-8">My Wishlist</h1>
 
         {wishlistedProperties.length > 0 ? (

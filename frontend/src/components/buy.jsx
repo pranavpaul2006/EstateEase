@@ -252,7 +252,7 @@ export default function Buy() {
 
   // The main return block for Buy.jsx remains the same
   return (
-    <div className="px-4 pt-20 py-8 max-w-7xl mx-auto flex flex-col lg:flex-row gap-8">
+    <div className="px-4 lg:px-8 pt-20 py-8 w-full flex flex-col lg:flex-row gap-8">
       <aside className="hidden mt-10 lg:block w-full max-w-xs bg-white p-6 rounded-lg shadow-md sticky top-24 h-fit">
         <h3 className="text-xl font-bold text-gray-800 mb-6 border-b pb-4">
           Filters

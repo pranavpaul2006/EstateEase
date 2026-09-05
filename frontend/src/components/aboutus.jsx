@@ -43,7 +43,7 @@ export default function AboutUs() {
 
       {/* MISSION */}
       <section className="py-14 md:py-20">
-        <div className="max-w-7xl mx-auto px-6 sm:px-12 md:px-16 lg:px-20 xl:px-32">
+        <div className="w-full px-4 lg:px-8">
           <div className="grid md:grid-cols-2 gap-10 items-center">
             <motion.div
               initial={{ opacity: 0, x: -40 }}
@@ -107,7 +107,7 @@ export default function AboutUs() {
 
       {/* FEATURES */}
       <section id="features" className="py-10 bg-white">
-        <div className="max-w-7xl mx-auto px-6 sm:px-12 md:px-16 lg:px-20 xl:px-32">
+        <div className="w-full px-4 lg:px-8">
           <h3 className="text-3xl font-bold text-[#154445] text-center mb-8">Why choose EstateEase?</h3>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
@@ -137,7 +137,7 @@ export default function AboutUs() {
 
       {/* CTA */}
       <section className="py-12">
-        <div className="max-w-7xl mx-auto px-6 sm:px-12 md:px-16 lg:px-20 xl:px-32 text-center">
+        <div className="w-full px-4 lg:px-8 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
