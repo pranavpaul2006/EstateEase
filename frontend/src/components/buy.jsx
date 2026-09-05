@@ -67,7 +67,7 @@ export default function Buy() {
             location: appliedFilters.city,
             type: appliedFilters.type,
             min: appliedFilters.min,
-            max: appliedFilters.max,
+            max: appliedFilters.max >= 50000000 ? undefined : appliedFilters.max,
           }
         });
         setProperties(data || []);
@@ -200,32 +200,37 @@ export default function Buy() {
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Price Range (₹)
         </label>
-        <div className="flex justify-between mb-2 text-sm text-gray-600">
-          <span>{minPrice.toLocaleString("en-IN")}</span>
-          <span>{maxPrice.toLocaleString("en-IN")}</span>
+        <div className="flex justify-between mb-4 text-sm font-semibold text-blue-700">
+          <span>₹{minPrice.toLocaleString("en-IN")}</span>
+          <span>{maxPrice >= 50000000 ? "₹5,00,00,000+" : `₹${maxPrice.toLocaleString("en-IN")}`}</span>
         </div>
-        <input
-          type="range"
-          min="0"
-          max="50000000"
-          step="500000"
-          value={minPrice}
-          onChange={(e) =>
-            setMinPrice(Math.min(Number(e.target.value), maxPrice))
-          }
-          className="w-full mb-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-        />
-        <input
-          type="range"
-          min="0"
-          max="50000000"
-          step="500000"
-          value={maxPrice}
-          onChange={(e) =>
-            setMaxPrice(Math.max(Number(e.target.value), minPrice))
-          }
-          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-        />
+        
+        <div className="relative w-full h-2 bg-gray-200 rounded-lg mb-8 mt-4">
+          <div 
+            className="absolute h-full bg-blue-600 rounded-lg pointer-events-none" 
+            style={{ left: `${(minPrice / 50000000) * 100}%`, right: `${100 - (maxPrice / 50000000) * 100}%` }}
+          ></div>
+          <input
+            type="range"
+            min="0"
+            max="50000000"
+            step="500000"
+            value={minPrice}
+            onChange={(e) => setMinPrice(Math.min(Number(e.target.value), maxPrice - 500000))}
+            style={{ zIndex: minPrice > 25000000 ? 20 : 10 }}
+            className="absolute w-full -top-2 h-6 appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-[5px] [&::-webkit-slider-thumb]:border-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-lg"
+          />
+          <input
+            type="range"
+            min="0"
+            max="50000000"
+            step="500000"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(Math.max(Number(e.target.value), minPrice + 500000))}
+            style={{ zIndex: minPrice > 25000000 ? 10 : 20 }}
+            className="absolute w-full -top-2 h-6 appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-[5px] [&::-webkit-slider-thumb]:border-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-lg"
+          />
+        </div>
       </div>
 
       <div className="space-y-2 pt-4 border-t">
